@@ -1,3 +1,4 @@
+// server.js (FORTIFIED) — reemplaza el existente en tu repo
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
@@ -8,138 +9,158 @@ const path = require("path");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const MongoStore = require("connect-mongo");
+const hpp = require("hpp");
+const cookieParser = require("cookie-parser");
+const { body } = require("express-validator");
+const xss = require("xss");
+
+// middlewares locales
+const { handleValidation } = require("./middlewares/validate");
+const { sanitizeBody } = require("./middlewares/sanitize");
+const { ensureAuth } = require("./middlewares/authMiddleware");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://danielper29.alwaysdata.net";
+const isProd = process.env.NODE_ENV === "production";
 
-// === Helmet base ===
-app.use(
-  helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "https://cdn.jsdelivr.net",
-          "https://cdnjs.cloudflare.com",
-          "https://www.google.com/recaptcha/",
-          "https://www.gstatic.com/recaptcha/",
-          "https://www.youtube.com", // necesario para embeds
-        ],
-        styleSrc: [
-          "'self'",
-          "https://cdn.jsdelivr.net",
-          "https://cdnjs.cloudflare.com",
-          "https://fonts.googleapis.com",
-          "'unsafe-inline'", // ⚠️ elimina si puedes
-        ],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "https://cdn.jsdelivr.net",
-          "https://cdnjs.cloudflare.com",
-          "https://d33wubrfki0l68.cloudfront.net",
-          "https://lh3.googleusercontent.com",
-          "https://img.youtube.com",
-          "https://i.ytimg.com",
-          "/Imagenes/favicon",
-        ],
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-        frameSrc: [
-          "'self'",
-          "https://www.google.com/recaptcha/",
-          "https://recaptcha.google.com/",
-          "https://www.youtube.com/",
-          "https://www.youtube-nocookie.com/",
-          "https://www.youtube.com/embed/",
-        ],
-        childSrc: [
-          "'self'",
-          "https://www.youtube.com/",
-          "https://www.youtube-nocookie.com/",
-          "https://www.youtube.com/embed/",
-        ],
-        connectSrc: [
-          "'self'",
-          "https://accounts.google.com",
-          "https://www.googleapis.com",
-          "https://www.google.com",
-          "https://www.gstatic.com",
-          "https://cdn.jsdelivr.net",
-        ],
-        manifestSrc: ["'self'"],
-      },
-    },
-  })
-);
+// --- validate critical environment variables ---
+const required = ["MONGO_URI", "SESSION_SECRET", "FRONTEND_URL"];
+const missing = required.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error("❌ Variables de entorno faltantes:", missing);
+  process.exit(1);
+}
 
-// === Extra headers de seguridad ===
+// === alwaysdata: trust proxy ===
+app.set("trust proxy", 1);
+
+// === rate-limit (defensa en capas) ===
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Demasiados intentos de autenticación. Espere 15 min." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: "Límite de solicitudes excedido" },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// === helmet + CSP (estricto) ===
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
+        "https://www.google.com/recaptcha/",
+        "https://www.gstatic.com/recaptcha/",
+        "https://apis.google.com"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
+        "https://fonts.googleapis.com"
+      ],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+      frameSrc: ["'self'", "https://www.google.com/recaptcha/", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      connectSrc: ["'self'", FRONTEND_URL, "https://accounts.google.com", "https://www.googleapis.com", "wss:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"]
+    }
+  }
+}));
+
+// === additional security headers ===
 app.use((req, res, next) => {
-  res.setHeader(
-    "Permissions-Policy",
-    "fullscreen=(self), geolocation=(), camera=(), microphone=(), interest-cohort=()"
-  );
-  res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
+  res.setHeader("Permissions-Policy", "geolocation=(), camera=(), microphone=(), interest-cohort=()");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  // Only send HSTS in production (because AlwaysData terminates TLS)
+  if (isProd) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
   next();
 });
 
-// === Rate limit global para /api ===
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api/", apiLimiter);
+// === other middlewares ===
+app.use(hpp());
+app.use(cookieParser());
+app.use("/api/auth", authLimiter);
+app.use("/api", apiLimiter);
 
-// === CORS ===
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "https://localhost:3000",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: Array.isArray(process.env.FRONTEND_URL) ? process.env.FRONTEND_URL : FRONTEND_URL,
+  credentials: true,
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization","X-Requested-With"]
+}));
 
-// === Parsers ===
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
-// === Session ===
+// === session in MongoStore ===
 const sessionStore = MongoStore.create({
   mongoUrl: process.env.MONGO_URI,
   collectionName: "sessions",
+  ttl: 14 * 24 * 60 * 60
 });
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "supersecreto",
-    resave: false,
-    saveUninitialized: false,
-    store: sessionStore,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000,
-    },
-  })
-);
 
-// === Passport ===
+app.use(session({
+  name: "session_id", // hide default name
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: sessionStore,
+  cookie: {
+    secure: isProd,
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+
+// === passport ===
 app.use(passport.initialize());
 app.use(passport.session());
 require("./config/passport")(passport);
 
-// === Conexión a Mongo ===
-mongoose
-  .connect(process.env.MONGO_URI)
+// === mongoose connect ===
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("✅ Conectado a MongoDB Atlas"))
-  .catch((err) => console.error("❌ Error de conexión:", err));
+  .catch(err => {
+    console.error("❌ Error de conexión MongoDB:", err);
+    process.exit(1);
+  });
 
-// === Rutas ===
+// === XSS sanitize middleware (global) ===
+const xssSanitize = (req, res, next) => {
+  if (req.body && typeof req.body === "object") {
+    for (const k of Object.keys(req.body)) {
+      if (typeof req.body[k] === "string") {
+        req.body[k] = xss(req.body[k], { whiteList: {}, stripIgnoreTag: true, stripIgnoreTagBody: ["script"] });
+      }
+    }
+  }
+  next();
+};
+app.use(xssSanitize);
+
+// === routes (existing in repo) ===
 const authRoutes = require("./routes/authRoutes");
 const comentariosRoutes = require("./routes/comentariosRoutes");
 const contactoRoutes = require("./routes/contactoRoutes");
@@ -149,26 +170,57 @@ app.use("/api/auth", authRoutes);
 app.use("/api/comentarios", comentariosRoutes);
 app.use("/api/contacto", contactoRoutes);
 
-// Alias para compatibilidad con frontend estático
-app.post("/enviar-correo", contactoController.enviarMensaje);
+// === contacto route with express-validator + sanitization ===
+app.post("/enviar-correo",
+  [
+    body("nombre").trim().isLength({ min: 1, max: 100 }).withMessage("Nombre requerido (<=100)"),
+    body("correo").trim().isEmail().withMessage("Email inválido").normalizeEmail(),
+    body("mensaje").trim().isLength({ min: 1, max: 1000 }).withMessage("Mensaje requerido (<=1000)"),
+    sanitizeBody(["nombre", "correo", "mensaje"])
+  ],
+  handleValidation,
+  contactoController.enviarMensaje
+);
 
-// === Estáticos ===
-app.use(express.static(path.join(__dirname, "public")));
+// === protected example route ===
+app.get("/api/perfil", ensureAuth, (req, res) => {
+  res.json({ user: req.user, message: "Acceso autorizado a perfil" });
+});
 
-// Catch-all GET -> index.html
+// === static files ===
+app.use(express.static(path.join(__dirname, "public"), { maxAge: '1d' }));
+
+// === health check ===
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  });
+});
+
+// === catch all ===
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// === Manejo de errores global ===
+// === global error handler ===
 app.use((err, req, res, next) => {
-  console.error(err);
-  res
-    .status(err.status || 500)
-    .json({ ok: false, error: err.message || "Server error" });
+  console.error("🚨 Error:", {
+    message: err.message,
+    url: req.originalUrl,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  });
+  res.status(err.status || 500).json({ ok: false, error: isProd ? "Error interno del servidor" : err.message });
 });
 
-// === Servidor en AlwaysData ===
+// === process events ===
+process.on("uncaughtException", (err) => console.error("Uncaught Exception:", err));
+process.on("unhandledRejection", (reason, p) => console.error("Unhandled Rejection:", reason));
+
+// === start server ===
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`Servidor fortificado en puerto ${PORT} - ${FRONTEND_URL}`);
 });
