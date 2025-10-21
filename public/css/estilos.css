@@ -1,0 +1,371 @@
+html, body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  
+}
+
+/* Loader pantalla completa */
+#loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000; /* Fondo negro o el que prefieras */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+#loader.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Logo animado */
+.loader-logo {
+  width: 120px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Ocultar el contenido hasta que cargue */
+body.loading #contenido-principal {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+body.loaded #contenido-principal {
+  opacity: 1;
+}
+
+
+.bg-gradient {
+  background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+}
+h2 {
+  color: #ffcc00;
+  margin-bottom: 1.5rem;
+}
+.card ul li {
+  margin-bottom: 0.5rem;
+}
+.card:hover {
+  transform: translateY(-5px);
+  transition: 0.3s;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+.card-img-top {
+  object-fit: cover;      /* Recorta sin deformar */
+  height: 220px;          /* Altura estándar */
+  width: 100%;            /* Ocupa todo el ancho disponible */
+  border-bottom: 4px solid #ffcc00;
+  transition: transform 0.3s ease;
+}
+
+.card-img-top:hover {
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+.card-body h5 {
+  font-weight: bold;
+  color: #fcfdfd;
+  margin: 0.5rem 0 0;
+  font-size: 1.1rem;
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0c0c0c;
+}
+
+#contactForm input,
+#contactForm textarea {
+  border-radius: 0.5rem;
+  border: 1px solid #ced4da;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.perfil-img:hover {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+#matrix-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  background: black;
+  overflow: hidden;   /* evita scroll fantasma */
+  pointer-events: none; /* opcional, ignora clics */
+}
+
+
+/* Animación suave para las tarjetas */
+.animate-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 1rem;
+}
+.animate-hover:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 0 25px rgba(0, 255, 0, 0.3);
+}
+
+/* Botones con estilo llamativo */
+.btn-outline-warning,
+.btn-outline-light {
+  border-radius: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline-warning:hover {
+  background-color: #ffc107;
+  color: black;
+  border-color: #ffc107;
+}
+
+.btn-outline-light:hover {
+  background-color: #ffffff;
+  color: #000;
+}
+
+#servicios .card-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+#servicios img {
+  max-height: 240px;
+  object-fit: cover;
+}
+
+/* ------------- Migración de estilos inline ------------- */
+
+/* Perfil (imagen pequeña, redonda) */
+.perfil-img {
+  width: 45px;
+  height: 45px;
+  object-fit: cover;
+  cursor: pointer;
+  display: inline-block;
+}
+
+/* Contenedor de comentarios con scroll */
+#comentarios-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Textarea del comentario */
+#comentario-texto {
+  height: 100px;
+  resize: vertical; /* permite redimensionar vertical si el usuario quiere */
+}
+
+/* HERO SLIDER */
+#hero {
+  height: calc(100vh - 70px); /* viewport menos navbar */
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-content {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5; 
+  pointer-events: none;
+  text-align: center;
+}
+.hero-content * {
+  pointer-events: auto; 
+}
+
+.hero-slider {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-slide {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1.02); 
+  transition: opacity 1s ease, transform 1.5s ease;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  transform: scale(1);
+  z-index: 1;
+}
+
+/* Contenido centrado */
+.hero-content {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 3px 10px rgba(0,0,0,0.7);
+  padding: 0 1rem;
+  max-width: 90%;
+}
+
+#hero-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  min-height: 2.5rem; /* evita salto al escribir */
+  color: #ffcc00;
+}
+
+#hero-subtitle {
+  font-size: 1.2rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+#hero-subtitle.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Botones prev/next */
+.hero-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 2rem;
+  padding: 10px;
+  cursor: pointer;
+  z-index: 10;
+}
+.hero-control.prev { left: 20px; }
+.hero-control.next { right: 20px; }
+
+.hero-control:hover {
+  background: rgba(255,193,7,0.8);
+}
+
+
+.hero-indicators {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 6;
+}
+
+.hero-indicators button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.hero-indicators button.active {
+  background: #ffc107;
+  transform: scale(1.2);
+}
+
+/* Animación más elegante para textos */
+.typewriter {
+  display: inline-block;
+  border-right: 2px solid #ffcc00;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  #nombre-completo,
+  #descripcion-profesion {
+    white-space: nowrap;        /* Evita saltos de línea */
+    overflow: hidden;           /* Oculta el desborde */
+    text-overflow: ellipsis;    /* Muestra "..." si no cabe */
+    display: block;
+  }
+
+  #nombre-completo {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  #descripcion-profesion {
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+  }
+}
+
+/* Animacion */
+@media (max-width: 480px) {
+  #nombre-completo {
+    font-size: 1.3rem;
+  }
+  #descripcion-profesion {
+    font-size: 0.8rem;
+  }
+  #hero-title {
+    font-size: 1rem;
+  }
+  #hero-subtitle {
+    font-size: 0.9rem;
+  }
+}
+
+/* Efecto fade-in general */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+.fade-in.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Efecto especial para el botón */
+.btn-animado {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.btn-animado.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+
+

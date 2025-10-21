@@ -1,0 +1,27 @@
+
+{
+  "slides": [
+    {
+      "image": "Imagenes/Mantenimientos.webp",
+      "title": "Mantenimiento de equipos electrónicos",
+      "subtitle": "El futuro de tu trabajo, sin interrupciones"
+    },
+    {
+      "image": "Imagenes/DesarrolloFullstack.png",
+      "title": "Desarrollo Fullstack",
+      "subtitle": "Creando aplicaciones modernas y seguras"
+    },
+    {
+      "image": "Imagenes/SeguridadInformatica.webp",
+      "title": "Ciberseguridad",
+      "subtitle": "Protegiendo la información con estrategias avanzadas"
+    },
+    {
+      "image": "Imagenes/MantenimientosTableroElectronico.webp",
+      "title": "Automatización Industrial",
+      "subtitle": "Optimiza tu tiempo, automatiza tu flujo con estrategias avanzadas"
+    }
+  ]
+}
+
+

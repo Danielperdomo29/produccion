@@ -1,0 +1,107 @@
+body {
+  scroll-behavior: smooth;
+  background-color: #f8f9fa;
+  padding-top: 70px
+}
+.bg-gradient {
+  background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+}
+h2 {
+  color: #ffcc00;
+  margin-bottom: 1.5rem;
+}
+.card ul li {
+  margin-bottom: 0.5rem;
+}
+.card:hover {
+  transform: translateY(-5px);
+  transition: 0.3s;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+.card-img-top {
+  object-fit: cover;      /* Recorta sin deformar */
+  height: 220px;          /* Altura estándar */
+  width: 100%;            /* Ocupa todo el ancho disponible */
+  border-bottom: 4px solid #ffcc00;
+  transition: transform 0.3s ease;
+}
+
+.card-img-top:hover {
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+.card-body h5 {
+  font-weight: bold;
+  color: #fcfdfd;
+  margin: 0.5rem 0 0;
+  font-size: 1.1rem;
+}
+
+
+#contactForm input,
+#contactForm textarea {
+  border-radius: 0.5rem;
+  border: 1px solid #ced4da;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.perfil-img:hover {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+#matrix-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1; /* detrás de todo */
+  width: 100%;
+  height: 100%;
+  background: black;
+}
+
+/* Animación suave para las tarjetas */
+.animate-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 1rem;
+}
+.animate-hover:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 0 25px rgba(0, 255, 0, 0.3);
+}
+
+/* Botones con estilo llamativo */
+.btn-outline-warning,
+.btn-outline-light {
+  border-radius: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline-warning:hover {
+  background-color: #ffc107;
+  color: black;
+  border-color: #ffc107;
+}
+
+.btn-outline-light:hover {
+  background-color: #ffffff;
+  color: #000;
+}
+
+#servicios .card-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+#servicios img {
+  max-height: 240px;
+  object-fit: cover;
+}
+
+

@@ -1,0 +1,249 @@
+// Inicializa animaciones AOS
+AOS.init();
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("Frontend cargado con AOS y servidor listo.");
+
+  // ====== MATRIX BACKGROUND ======
+  const canvas = document.getElementById("matrix-canvas");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    const letters = "01";
+    const fontSize = 16;
+    let columns = Math.floor(window.innerWidth / fontSize);
+    let drops = Array(columns).fill(1);
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      columns = Math.floor(canvas.width / fontSize);
+      drops = Array(columns).fill(1);
+    }
+
+    function drawMatrix() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#0F0";
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = letters.charAt(Math.floor(Math.random() * letters.length));
+        ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+
+        drops[i]++;
+      }
+    }
+
+    resizeCanvas();
+    setInterval(drawMatrix, 33);
+    window.addEventListener("resize", resizeCanvas);
+  }
+
+  // ====== FORMULARIO DE CONTACTO ======
+  const form = document.getElementById("contactForm");
+  const alertBox = document.getElementById("formAlert");
+
+  if (form && alertBox) {
+    const submitBtn = form.querySelector("button");
+
+    function mostrarAlerta(mensaje, tipo = "success") {
+      alertBox.innerHTML = ""; // Limpiar alertas anteriores
+
+      const div = document.createElement("div");
+      div.className = `alert alert-${tipo}`;
+      div.textContent = mensaje;
+
+      alertBox.appendChild(div);
+
+      setTimeout(() => div.remove(), 5000); // Ocultar tras 5s
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nombre = form.nombre.value.trim();
+      const correo = form.correo.value.trim();
+      const mensaje = form.mensaje.value.trim();
+
+      if (!nombre || !correo || !mensaje) {
+        return mostrarAlerta("Todos los campos son obligatorios.", "danger");
+      }
+
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch("/enviar-correo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, correo, mensaje })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          mostrarAlerta(data.mensaje, "success");
+          form.reset();
+        } else {
+          mostrarAlerta(data.error || "Error al enviar el mensaje.", "danger");
+        }
+
+      } catch (error) {
+        console.error("Error de red:", error);
+        mostrarAlerta("No se pudo conectar al servidor.", "danger");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  }
+  
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Elementos del DOM
+  const btnLogin = document.getElementById('btn-login-google');
+  const btnLogout = document.getElementById('btn-logout');
+  const btnEnviarComentario = document.getElementById('btn-enviar-comentario');
+  const comentariosContainer = document.getElementById('comentarios-container');
+  const usuarioInfo = document.getElementById('usuario-info');
+  const usuarioAvatar = document.getElementById('usuario-avatar');
+  const usuarioNombre = document.getElementById('usuario-nombre');
+  const comentarioTexto = document.getElementById('comentario-texto');
+
+  // Verificar estado de autenticación
+  async function verificarAutenticacion() {
+    try {
+      const response = await fetch('/api/auth/current');
+      if (!response.ok) throw new Error('No autenticado');
+      
+      const usuario = await response.json();
+      
+      // Mostrar información del usuario
+      usuarioAvatar.src = usuario.avatar || 'https://i.imgur.com/8Km9tLL.jpg';
+      usuarioNombre.textContent = usuario.nombre;
+      usuarioInfo.style.display = 'block';
+      btnLogin.style.display = 'none';
+      btnLogout.style.display = 'inline-block';
+      
+      return usuario;
+    } catch (error) {
+      // Ocultar elementos de usuario autenticado
+      usuarioInfo.style.display = 'none';
+      btnLogin.style.display = 'inline-block';
+      btnLogout.style.display = 'none';
+      return null;
+    }
+  }
+
+  // Cargar comentarios
+  async function cargarComentarios() {
+    try {
+      const response = await fetch('/api/comentarios');
+      const comentarios = await response.json();
+      
+      comentariosContainer.innerHTML = comentarios.map(comentario => `
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <img src="${comentario.usuario.avatar || 'https://i.imgur.com/8Km9tLL.jpg'}" 
+                   alt="${comentario.usuario.nombre}" 
+                   class="rounded-circle me-2" 
+                   width="40">
+              <div>
+                <h6 class="mb-0">${comentario.usuario.nombre}</h6>
+                <small class="text-muted">${new Date(comentario.fecha).toLocaleString()}</small>
+              </div>
+            </div>
+            <p class="card-text">${comentario.contenido}</p>
+          </div>
+        </div>
+      `).join('');
+    } catch (error) {
+      console.error('Error al cargar comentarios:', error);
+      comentariosContainer.innerHTML = `
+        <div class="alert alert-warning">
+          Error al cargar los comentarios. Por favor recarga la página.
+        </div>
+      `;
+    }
+  }
+
+  // Manejar envío de comentarios
+  async function enviarComentario() {
+    const contenido = comentarioTexto.value.trim();
+    if (!contenido) {
+      alert('Por favor escribe un comentario');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/comentarios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ contenido })
+      });
+
+      const resultado = await response.json();
+
+      if (response.status === 401) {
+        if (confirm('Debes iniciar sesión para comentar. ¿Deseas iniciar sesión ahora?')) {
+          window.location.href = '/api/auth/google';
+        }
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(resultado.error || 'Error al enviar comentario');
+      }
+
+      alert(resultado.mensaje);
+      comentarioTexto.value = '';
+      await cargarComentarios();
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error.message || 'Ocurrió un error al enviar el comentario');
+    }
+  }
+
+  // Event Listeners
+  btnLogin.addEventListener('click', () => {
+    window.location.href = '/api/auth/google';
+  });
+
+  btnLogout.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  });
+
+  btnEnviarComentario.addEventListener('click', enviarComentario);
+
+  // Permitir enviar comentario con Enter
+  comentarioTexto.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarComentario();
+    }
+  });
+
+  // Inicializar
+  verificarAutenticacion();
+  cargarComentarios();
+
+  // Inicializar animaciones AOS
+  if (typeof AOS !== 'undefined') {
+    AOS.init({
+      duration: 800,
+      easing: 'ease-in-out',
+      once: true
+    });
+  }
+});
